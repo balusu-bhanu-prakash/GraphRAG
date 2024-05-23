@@ -3,6 +3,11 @@ from neo4j import GraphDatabase
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 
+# Function to initialize the Neo4j database driver
+def init_db_driver(graph_db_url, password):
+    return GraphDatabase.driver(graph_db_url, auth=("neo4j", password))
+
+
 # Function for the authentication page
 def authentication_page():
     st.title("Authentication")
@@ -22,16 +27,6 @@ def authentication_page():
             st.session_state.page = "prompt_page"
         else:
             st.error("Please fill in all the fields")
-
-    if "graph_db_url" in st.session_state and "password" in st.session_state:
-        try:
-            with GraphDatabase.driver(
-                st.session_state.graph_db_url, auth=("neo4j", st.session_state.password)
-            ) as driver:
-                driver.verify_connectivity()
-                st.session_state.driver = driver
-        except Exception as e:
-            st.error(f"Error connecting to the database: {e}")
 
 
 # Function for the prompt page
@@ -54,10 +49,13 @@ def prompt_page():
             result = llm.invoke("Write a cypher query where I need you to " + query)
             # Cleaning to output for a CYPHER query
             cypher_query = result.content.split("```cypher")[1].split("```")[0].strip()
-            print(cypher_query)
 
             try:
-                with st.session_state.driver.session() as session:
+                # Reinitialize the driver for the session
+                driver = init_db_driver(
+                    st.session_state.graph_db_url, st.session_state.password
+                )
+                with driver.session() as session:
                     results = session.run(cypher_query)
                     st.code(cypher_query, language="cypher")
             except Exception as e:

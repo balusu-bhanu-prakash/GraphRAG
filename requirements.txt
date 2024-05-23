@@ -1,0 +1,3 @@
+streamlit
+neo4j
+langchain-google-genai

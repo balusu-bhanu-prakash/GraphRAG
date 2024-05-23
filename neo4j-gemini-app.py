@@ -23,8 +23,15 @@ def authentication_page():
             st.session_state.graph_db_url = graph_db_url
             st.session_state.password = password
             st.session_state.google_api_key = google_api_key
-            # Navigate to the prompt page
-            st.session_state.page = "prompt_page"
+            # Attempt to initialize the driver and verify connectivity
+            try:
+                st.session_state.driver = init_db_driver(graph_db_url, password)
+                st.session_state.driver.verify_connectivity()
+                st.success("Connection to the database was successful!")
+                # Navigate to the prompt page
+                st.session_state.page = "prompt_page"
+            except Exception as e:
+                st.error(f"Error connecting to the database: {e}")
         else:
             st.error("Please fill in all the fields")
 
@@ -52,10 +59,10 @@ def prompt_page():
 
             try:
                 # Reinitialize the driver for the session
-                driver = init_db_driver(
+                st.session_state.driver = init_db_driver(
                     st.session_state.graph_db_url, st.session_state.password
                 )
-                with driver.session() as session:
+                with st.session_state.driver.session() as session:
                     results = session.run(cypher_query)
                     st.code(cypher_query, language="cypher")
             except Exception as e:
